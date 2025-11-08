@@ -17,6 +17,7 @@ public class ApplicationDTO {
     private UUID uuid;
     private String name;
     private String description;
+    private Long repositoryId;
     private String repositoryUrl;
     private String department;
     private String author;
