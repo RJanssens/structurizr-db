@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "structurizr": {
+      "command": "node",
+      "args": [
+        "/ABSOLUTE/PATH/TO/structurizr-db/mcp-server/build/index.js"
+      ],
+      "env": {
+        "STRUCTURIZR_API_URL": "http://localhost:8080/api"
+      }
+    }
+  }
+}

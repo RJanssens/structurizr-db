@@ -14,11 +14,12 @@ This project provides a complete solution for:
 
 ## Architecture
 
-The system consists of three main components:
+The system consists of four main components:
 
 1. **Backend (Spring Boot)**: REST API and database layer
 2. **Frontend (Angular)**: Web UI for browsing and analyzing applications
 3. **Database (PostgreSQL)**: Stores all architecture data with versioning
+4. **MCP Server (Node.js)**: Model Context Protocol server for Claude integration
 
 ## Technology Stack
 
@@ -39,6 +40,12 @@ The system consists of three main components:
 ### Infrastructure
 - Docker & Docker Compose
 - PostgreSQL 15
+
+### MCP Server
+- Node.js 20+
+- TypeScript
+- MCP SDK
+- Axios
 
 ## Prerequisites
 
@@ -92,6 +99,83 @@ This will start:
 - **Frontend UI**: http://localhost:4200
 - **Backend API**: http://localhost:8080/api
 - **API Health Check**: http://localhost:8080/actuator/health
+
+## MCP Server Integration
+
+The project includes a Model Context Protocol (MCP) server that allows Claude Desktop, Claude Code CLI, and other MCP clients to directly interact with your architecture landscape.
+
+### What is MCP?
+
+MCP is an open protocol that enables AI assistants to securely interact with external data sources and tools. The Structurizr MCP server exposes 11 tools, 5 resources, and 4 pre-configured prompts for architecture analysis.
+
+### Quick Setup
+
+1. **Install and Build the MCP Server:**
+   ```bash
+   cd mcp-server
+   npm install
+   npm run build
+   ```
+
+2. **Configure Claude Desktop:**
+
+   Add to your Claude Desktop config file:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+   ```json
+   {
+     "mcpServers": {
+       "structurizr": {
+         "command": "node",
+         "args": ["/absolute/path/to/structurizr-db/mcp-server/build/index.js"],
+         "env": {
+           "STRUCTURIZR_API_URL": "http://localhost:8080/api"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Restart Claude Desktop**
+
+### Available Capabilities
+
+**11 Tools:**
+- List, search, and create applications
+- Query technology stacks
+- Analyze interfaces and dependencies
+- View version history
+- Get statistics
+
+**5 Resources:**
+- All applications
+- Shared components
+- Statistics
+- Departments and technologies
+
+**4 Prompts:**
+- Comprehensive application analysis
+- Technology usage analysis
+- Architecture overview generation
+- Dependency identification
+
+### Example Usage
+
+Once configured, you can interact with Claude naturally:
+
+```
+You: "Show me all applications using PostgreSQL 15"
+Claude: [uses find_applications_by_technology tool]
+
+You: "Analyze the Customer Service application"
+Claude: [uses analyze_application prompt for comprehensive analysis]
+
+You: "What are the shared components in our landscape?"
+Claude: [uses list_applications tool with sharedOnly filter]
+```
+
+For detailed MCP documentation, see [mcp-server/README.md](mcp-server/README.md)
 
 ## Database Schema
 
@@ -344,8 +428,15 @@ structurizr-db/
 │       ├── services/        # API services
 │       ├── models/          # TypeScript interfaces
 │       └── environments/    # Environment configs
+├── mcp-server/
+│   ├── src/
+│   │   └── index.ts         # MCP server implementation
+│   ├── build/               # Compiled JavaScript
+│   ├── package.json         # Node.js dependencies
+│   └── README.md            # MCP documentation
 ├── docker-compose.yml       # Docker orchestration
-└── Dockerfile              # Backend container
+├── Dockerfile               # Backend container
+└── README.md                # Main documentation
 
 ```
 
