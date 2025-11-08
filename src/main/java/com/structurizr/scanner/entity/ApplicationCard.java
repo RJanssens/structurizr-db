@@ -1,6 +1,7 @@
 package com.structurizr.scanner.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -32,6 +33,7 @@ public class ApplicationCard {
     /**
      * Parent application this card belongs to
      */
+    @NotNull(message = "Application is required")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "application_id", nullable = false)
     private Application application;
@@ -39,24 +41,31 @@ public class ApplicationCard {
     /**
      * Card title
      */
+    @NotBlank(message = "Title is required")
+    @Size(min = 1, max = 255, message = "Title must be between 1 and 255 characters")
     @Column(nullable = false, length = 255)
     private String title;
 
     /**
      * Type of card (e.g., "overview", "architecture", "sequence", "deployment", "custom")
      */
+    @NotBlank(message = "Card type is required")
+    @Pattern(regexp = "^(overview|architecture|sequence|deployment|dataflow|custom)$",
+             message = "Card type must be one of: overview, architecture, sequence, deployment, dataflow, custom")
     @Column(name = "card_type", nullable = false, length = 50)
     private String cardType;
 
     /**
      * Structured text content (supports Markdown)
      */
+    @Size(max = 100000, message = "Content must not exceed 100,000 characters")
     @Column(columnDefinition = "TEXT")
     private String content;
 
     /**
      * Mermaid diagram definition
      */
+    @Size(max = 50000, message = "Mermaid diagram must not exceed 50,000 characters")
     @Column(name = "mermaid_diagram", columnDefinition = "TEXT")
     private String mermaidDiagram;
 

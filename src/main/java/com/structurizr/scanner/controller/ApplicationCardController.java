@@ -6,9 +6,11 @@ import com.structurizr.scanner.entity.ApplicationCard;
 import com.structurizr.scanner.mapper.ApplicationMapper;
 import com.structurizr.scanner.repository.ApplicationCardRepository;
 import com.structurizr.scanner.repository.ApplicationRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/applications/{applicationId}/cards")
 @CrossOrigin(origins = "*")
+@Validated
 public class ApplicationCardController {
 
     @Autowired
@@ -94,7 +97,7 @@ public class ApplicationCardController {
     @PostMapping
     public ResponseEntity<ApplicationCardDTO> createCard(
             @PathVariable Long applicationId,
-            @RequestBody ApplicationCardDTO cardDTO) {
+            @Valid @RequestBody ApplicationCardDTO cardDTO) {
 
         return applicationRepository.findById(applicationId)
             .map(application -> {
@@ -109,7 +112,7 @@ public class ApplicationCardController {
     public ResponseEntity<ApplicationCardDTO> updateCard(
             @PathVariable Long applicationId,
             @PathVariable Long cardId,
-            @RequestBody ApplicationCardDTO cardDTO) {
+            @Valid @RequestBody ApplicationCardDTO cardDTO) {
 
         return cardRepository.findByIdAndApplicationId(cardId, applicationId)
             .map(existing -> {

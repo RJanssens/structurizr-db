@@ -224,8 +224,12 @@ import { ApplicationCardsComponent } from '../application-cards/application-card
           </mat-card>
         </mat-tab>
 
-        <mat-tab label="Documentation Cards">
-          <app-application-cards [applicationId]="application.id"></app-application-cards>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            Documentation Cards
+            <span *ngIf="cardCount > 0" class="tab-badge">{{ cardCount }}</span>
+          </ng-template>
+          <app-application-cards [applicationId]="application.id" (cardCountChange)="onCardCountChange($event)"></app-application-cards>
         </mat-tab>
       </mat-tab-group>
     </div>
@@ -252,12 +256,23 @@ import { ApplicationCardsComponent } from '../application-cards/application-card
       margin-top: 20px;
       margin-bottom: 10px;
     }
+
+    .tab-badge {
+      background: #3f51b5;
+      color: white;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 11px;
+      margin-left: 8px;
+      font-weight: 500;
+    }
   `]
 })
 export class ApplicationDetailComponent implements OnInit {
   application?: Application;
   versions: ApplicationVersion[] = [];
   loading = true;
+  cardCount = 0;
 
   constructor(
     private route: ActivatedRoute,
@@ -293,5 +308,9 @@ export class ApplicationDetailComponent implements OnInit {
         console.error('Error loading versions:', error);
       }
     });
+  }
+
+  onCardCountChange(count: number): void {
+    this.cardCount = count;
   }
 }
