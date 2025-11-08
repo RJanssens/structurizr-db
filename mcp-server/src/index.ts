@@ -228,6 +228,140 @@ class StructurizrMCPServer {
             properties: {},
           },
         },
+        {
+          name: "list_application_cards",
+          description: "Get all documentation cards for an application",
+          inputSchema: {
+            type: "object",
+            properties: {
+              applicationId: {
+                type: "number",
+                description: "Application ID",
+              },
+              visible: {
+                type: "boolean",
+                description: "Filter by visibility (optional)",
+              },
+            },
+            required: ["applicationId"],
+          },
+        },
+        {
+          name: "get_application_card",
+          description: "Get a specific documentation card",
+          inputSchema: {
+            type: "object",
+            properties: {
+              applicationId: {
+                type: "number",
+                description: "Application ID",
+              },
+              cardId: {
+                type: "number",
+                description: "Card ID",
+              },
+            },
+            required: ["applicationId", "cardId"],
+          },
+        },
+        {
+          name: "create_application_card",
+          description: "Create a new documentation card for an application",
+          inputSchema: {
+            type: "object",
+            properties: {
+              applicationId: {
+                type: "number",
+                description: "Application ID",
+              },
+              title: {
+                type: "string",
+                description: "Card title",
+              },
+              cardType: {
+                type: "string",
+                description: "Card type (e.g., 'overview', 'architecture', 'sequence', 'deployment')",
+              },
+              content: {
+                type: "string",
+                description: "Card content in Markdown format",
+              },
+              mermaidDiagram: {
+                type: "string",
+                description: "Mermaid diagram definition (optional)",
+              },
+              sortOrder: {
+                type: "number",
+                description: "Display order (default: 0)",
+              },
+              visible: {
+                type: "boolean",
+                description: "Visibility flag (default: true)",
+              },
+            },
+            required: ["applicationId", "title", "cardType"],
+          },
+        },
+        {
+          name: "update_application_card",
+          description: "Update an existing documentation card",
+          inputSchema: {
+            type: "object",
+            properties: {
+              applicationId: {
+                type: "number",
+                description: "Application ID",
+              },
+              cardId: {
+                type: "number",
+                description: "Card ID",
+              },
+              title: {
+                type: "string",
+                description: "Card title",
+              },
+              cardType: {
+                type: "string",
+                description: "Card type",
+              },
+              content: {
+                type: "string",
+                description: "Card content in Markdown format",
+              },
+              mermaidDiagram: {
+                type: "string",
+                description: "Mermaid diagram definition",
+              },
+              sortOrder: {
+                type: "number",
+                description: "Display order",
+              },
+              visible: {
+                type: "boolean",
+                description: "Visibility flag",
+              },
+            },
+            required: ["applicationId", "cardId"],
+          },
+        },
+        {
+          name: "delete_application_card",
+          description: "Delete a documentation card",
+          inputSchema: {
+            type: "object",
+            properties: {
+              applicationId: {
+                type: "number",
+                description: "Application ID",
+              },
+              cardId: {
+                type: "number",
+                description: "Card ID",
+              },
+            },
+            required: ["applicationId", "cardId"],
+          },
+        },
       ],
     }));
 
@@ -391,6 +525,101 @@ class StructurizrMCPServer {
             };
           }
 
+          case "list_application_cards": {
+            const params: any = {};
+            if (args.visible !== undefined) {
+              params.visible = args.visible;
+            }
+            const response = await this.api.get(
+              `/applications/${args.applicationId}/cards`,
+              { params }
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "get_application_card": {
+            const response = await this.api.get(
+              `/applications/${args.applicationId}/cards/${args.cardId}`
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "create_application_card": {
+            const cardData: any = {
+              applicationId: args.applicationId,
+              title: args.title,
+              cardType: args.cardType,
+              content: args.content || "",
+              mermaidDiagram: args.mermaidDiagram || "",
+              sortOrder: args.sortOrder ?? 0,
+              visible: args.visible ?? true,
+            };
+            const response = await this.api.post(
+              `/applications/${args.applicationId}/cards`,
+              cardData
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "update_application_card": {
+            const updateData: any = {
+              applicationId: args.applicationId,
+              title: args.title,
+              cardType: args.cardType,
+              content: args.content,
+              mermaidDiagram: args.mermaidDiagram,
+              sortOrder: args.sortOrder,
+              visible: args.visible,
+            };
+            const response = await this.api.put(
+              `/applications/${args.applicationId}/cards/${args.cardId}`,
+              updateData
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "delete_application_card": {
+            await this.api.delete(
+              `/applications/${args.applicationId}/cards/${args.cardId}`
+            );
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Card ${args.cardId} deleted successfully`,
+                },
+              ],
+            };
+          }
+
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -543,6 +772,38 @@ class StructurizrMCPServer {
             },
           ],
         },
+        {
+          name: "generate_application_card",
+          description: "Generate a documentation card with structured content and diagrams",
+          arguments: [
+            {
+              name: "application_name",
+              description: "Name of the application",
+              required: true,
+            },
+            {
+              name: "card_type",
+              description: "Type of card to generate (overview, architecture, sequence, deployment, dataflow)",
+              required: true,
+            },
+          ],
+        },
+        {
+          name: "create_sequence_diagram_card",
+          description: "Create a documentation card with a sequence diagram",
+          arguments: [
+            {
+              name: "application_name",
+              description: "Name of the application",
+              required: true,
+            },
+            {
+              name: "scenario",
+              description: "The scenario to diagram (e.g., 'user login', 'data processing')",
+              required: true,
+            },
+          ],
+        },
       ],
     }));
 
@@ -634,6 +895,100 @@ Use the MCP tools to gather all necessary information.`,
 4. Technology dependencies
 5. A dependency graph visualization in Mermaid format
 6. Analysis of coupling and potential risks`,
+                },
+              },
+            ],
+          };
+        }
+
+        case "generate_application_card": {
+          const appName = args?.application_name as string;
+          const cardType = args?.card_type as string;
+          return {
+            messages: [
+              {
+                role: "user",
+                content: {
+                  type: "text",
+                  text: `Generate a ${cardType} documentation card for the application "${appName}".
+
+First, use the MCP tools to:
+1. Get the application details (search by name)
+2. Get the application's technology stack
+3. Get the application's interfaces (inbound and outbound)
+
+Then create a documentation card using the create_application_card tool with:
+- Title: "${cardType.charAt(0).toUpperCase() + cardType.slice(1)} - ${appName}"
+- Card Type: "${cardType}"
+- Content: Structured markdown content describing the ${cardType} including all relevant details
+- Mermaid Diagram: A relevant diagram for this type (e.g., architecture diagram, component diagram, deployment diagram)
+
+Make the content comprehensive and well-structured with:
+- Clear headings
+- Bullet points for lists
+- Code blocks for configurations
+- Links to repositories when available
+
+The Mermaid diagram should be appropriate for the card type:
+- overview: High-level architecture diagram
+- architecture: Detailed component diagram
+- sequence: Sequence diagram for key flows
+- deployment: Deployment architecture
+- dataflow: Data flow diagram`,
+                },
+              },
+            ],
+          };
+        }
+
+        case "create_sequence_diagram_card": {
+          const appName = args?.application_name as string;
+          const scenario = args?.scenario as string;
+          return {
+            messages: [
+              {
+                role: "user",
+                content: {
+                  type: "text",
+                  text: `Create a sequence diagram card for the application "${appName}" showing the "${scenario}" scenario.
+
+First, use the MCP tools to:
+1. Get the application details to understand its architecture
+2. Get the application's interfaces to understand dependencies
+
+Then create a documentation card using the create_application_card tool with:
+- Title: "Sequence Diagram - ${scenario}"
+- Card Type: "sequence"
+- Content: Markdown description of the scenario including:
+  * Purpose and context
+  * Actors involved
+  * Main steps
+  * Error handling
+  * Performance considerations
+- Mermaid Diagram: A detailed sequence diagram showing:
+  * All participants (users, services, databases, external systems)
+  * Message flows with labels
+  * Activation boxes
+  * Return messages
+  * Alternative flows if relevant
+
+Example Mermaid sequence diagram format:
+\`\`\`
+sequenceDiagram
+    participant User
+    participant ${appName}
+    participant Database
+    participant ExternalAPI
+
+    User->>+${appName}: Request
+    ${appName}->>+Database: Query
+    Database-->>-${appName}: Result
+    ${appName}->>+ExternalAPI: API Call
+    ExternalAPI-->>-${appName}: Response
+    ${appName}-->>-User: Success
+\`\`\`
+
+Make the diagram clear, comprehensive, and technically accurate.`,
                 },
               },
             ],

@@ -65,6 +65,12 @@ public class ApplicationMapper {
                 .collect(Collectors.toList()));
         }
 
+        if (entity.getCards() != null) {
+            dto.setCards(entity.getCards().stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList()));
+        }
+
         return dto;
     }
 
@@ -176,5 +182,39 @@ public class ApplicationMapper {
         dto.setScannedBy(entity.getScannedBy());
 
         return dto;
+    }
+
+    public ApplicationCardDTO toDTO(ApplicationCard entity) {
+        if (entity == null) return null;
+
+        ApplicationCardDTO dto = new ApplicationCardDTO();
+        dto.setId(entity.getId());
+        dto.setApplicationId(entity.getApplication() != null ? entity.getApplication().getId() : null);
+        dto.setTitle(entity.getTitle());
+        dto.setCardType(entity.getCardType());
+        dto.setContent(entity.getContent());
+        dto.setMermaidDiagram(entity.getMermaidDiagram());
+        dto.setSortOrder(entity.getSortOrder());
+        dto.setVisible(entity.getVisible());
+        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setUpdatedAt(entity.getUpdatedAt());
+
+        return dto;
+    }
+
+    public ApplicationCard toEntity(ApplicationCardDTO dto, Application application) {
+        if (dto == null) return null;
+
+        ApplicationCard entity = new ApplicationCard();
+        entity.setId(dto.getId());
+        entity.setApplication(application);
+        entity.setTitle(dto.getTitle());
+        entity.setCardType(dto.getCardType());
+        entity.setContent(dto.getContent());
+        entity.setMermaidDiagram(dto.getMermaidDiagram());
+        entity.setSortOrder(dto.getSortOrder());
+        entity.setVisible(dto.getVisible());
+
+        return entity;
     }
 }

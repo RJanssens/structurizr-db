@@ -130,6 +130,12 @@ public class Application {
     @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ApplicationMetadata> metadata = new ArrayList<>();
 
+    /**
+     * Documentation cards for this application
+     */
+    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ApplicationCard> cards = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         if (uuid == null) {

@@ -17,6 +17,7 @@ export interface Application {
   inboundInterfaces?: ApplicationInterface[];
   users?: ApplicationUser[];
   metadata?: ApplicationMetadata[];
+  cards?: ApplicationCard[];
 }
 
 export interface TechnologyStack {
@@ -89,4 +90,17 @@ export interface ApplicationStatistics {
   totalApplications: number;
   sharedComponents: number;
   departments: number;
+}
+
+export interface ApplicationCard {
+  id?: number;
+  applicationId: number;
+  title: string;
+  cardType: string;
+  content?: string;
+  mermaidDiagram?: string;
+  sortOrder: number;
+  visible: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

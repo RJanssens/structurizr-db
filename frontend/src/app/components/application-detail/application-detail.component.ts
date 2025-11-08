@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApplicationService } from '../../services/application.service';
 import { ApplicationVersionService } from '../../services/application-version.service';
 import { Application, ApplicationVersion } from '../../models/application.model';
+import { ApplicationCardsComponent } from '../application-cards/application-cards.component';
 
 @Component({
   selector: 'app-application-detail',
@@ -24,7 +25,8 @@ import { Application, ApplicationVersion } from '../../models/application.model'
     MatChipsModule,
     MatProgressSpinnerModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    ApplicationCardsComponent
   ],
   template: `
     <div *ngIf="loading" class="loading-spinner">
@@ -220,6 +222,10 @@ import { Application, ApplicationVersion } from '../../models/application.model'
               </div>
             </mat-card-content>
           </mat-card>
+        </mat-tab>
+
+        <mat-tab label="Documentation Cards">
+          <app-application-cards [applicationId]="application.id"></app-application-cards>
         </mat-tab>
       </mat-tab-group>
     </div>

@@ -33,4 +33,5 @@ public class ApplicationDTO {
     private List<ApplicationInterfaceDTO> inboundInterfaces = new ArrayList<>();
     private List<ApplicationUserDTO> users = new ArrayList<>();
     private List<ApplicationMetadataDTO> metadata = new ArrayList<>();
+    private List<ApplicationCardDTO> cards = new ArrayList<>();
 }
