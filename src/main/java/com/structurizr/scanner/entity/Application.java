@@ -19,7 +19,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "applications", indexes = {
     @Index(name = "idx_app_name", columnList = "name"),
-    @Index(name = "idx_app_uuid", columnList = "uuid")
+    @Index(name = "idx_app_uuid", columnList = "uuid"),
+    @Index(name = "idx_app_repository", columnList = "repository_id")
 })
 @Data
 @NoArgsConstructor
@@ -49,7 +50,15 @@ public class Application {
     private String description;
 
     /**
-     * GitLab repository URL
+     * Repository this application belongs to
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repository_id")
+    private Repository repository;
+
+    /**
+     * GitLab repository URL (deprecated - use repository.url instead)
+     * Kept for backward compatibility
      */
     @Column(length = 500)
     private String repositoryUrl;

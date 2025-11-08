@@ -228,6 +228,170 @@ class StructurizrMCPServer {
             properties: {},
           },
         },
+        {
+          name: "list_repositories",
+          description: "List all GitLab repositories",
+          inputSchema: {
+            type: "object",
+            properties: {
+              namespace: {
+                type: "string",
+                description: "Filter by namespace/group (optional)",
+              },
+              enabledOnly: {
+                type: "boolean",
+                description: "Only return enabled repositories (optional)",
+              },
+              archivedOnly: {
+                type: "boolean",
+                description: "Only return archived repositories (optional)",
+              },
+            },
+          },
+        },
+        {
+          name: "get_repository",
+          description: "Get detailed information about a specific repository",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: {
+                type: "number",
+                description: "Repository ID",
+              },
+              uuid: {
+                type: "string",
+                description: "Repository UUID (alternative to id)",
+              },
+            },
+            oneOf: [{ required: ["id"] }, { required: ["uuid"] }],
+          },
+        },
+        {
+          name: "search_repositories",
+          description: "Search repositories by name or description",
+          inputSchema: {
+            type: "object",
+            properties: {
+              term: {
+                type: "string",
+                description: "Search term",
+              },
+            },
+            required: ["term"],
+          },
+        },
+        {
+          name: "create_repository",
+          description: "Create a new repository entry",
+          inputSchema: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description: "Repository name",
+              },
+              url: {
+                type: "string",
+                description: "Repository URL",
+              },
+              namespacePath: {
+                type: "string",
+                description: "Namespace/group path",
+              },
+              description: {
+                type: "string",
+                description: "Repository description",
+              },
+              defaultBranch: {
+                type: "string",
+                description: "Default branch name",
+              },
+              visibility: {
+                type: "string",
+                description: "Visibility (public, private, internal)",
+              },
+            },
+            required: ["name", "url"],
+          },
+        },
+        {
+          name: "get_repository_statistics",
+          description: "Get repository statistics",
+          inputSchema: {
+            type: "object",
+            properties: {},
+          },
+        },
+        {
+          name: "list_repository_scans",
+          description: "List repository scans",
+          inputSchema: {
+            type: "object",
+            properties: {
+              repositoryId: {
+                type: "number",
+                description: "Filter by repository ID (optional)",
+              },
+              status: {
+                type: "string",
+                description: "Filter by scan status (optional)",
+              },
+            },
+          },
+        },
+        {
+          name: "get_repository_scan",
+          description: "Get detailed information about a specific scan",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: {
+                type: "number",
+                description: "Scan ID",
+              },
+              uuid: {
+                type: "string",
+                description: "Scan UUID (alternative to id)",
+              },
+            },
+            oneOf: [{ required: ["id"] }, { required: ["uuid"] }],
+          },
+        },
+        {
+          name: "create_repository_scan",
+          description: "Create a new repository scan entry",
+          inputSchema: {
+            type: "object",
+            properties: {
+              repositoryId: {
+                type: "number",
+                description: "Repository ID to scan",
+              },
+              scannedBranch: {
+                type: "string",
+                description: "Branch to scan",
+              },
+              scanType: {
+                type: "string",
+                description: "Scan type (FULL, INCREMENTAL, METADATA_ONLY)",
+              },
+              initiatedBy: {
+                type: "string",
+                description: "Who initiated the scan",
+              },
+            },
+            required: ["repositoryId", "scannedBranch"],
+          },
+        },
+        {
+          name: "get_scan_statistics",
+          description: "Get repository scan statistics",
+          inputSchema: {
+            type: "object",
+            properties: {},
+          },
+        },
       ],
     }));
 
@@ -381,6 +545,147 @@ class StructurizrMCPServer {
 
           case "get_all_technologies": {
             const response = await this.api.get("/technology-stack/technologies");
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "list_repositories": {
+            let url = "/repositories";
+            if (args.enabledOnly) {
+              url = "/repositories/enabled";
+            } else if (args.archivedOnly) {
+              url = "/repositories/archived";
+            } else if (args.namespace) {
+              url = `/repositories/namespace/${args.namespace}`;
+            }
+            const response = await this.api.get(url);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "get_repository": {
+            const url = args.uuid
+              ? `/repositories/uuid/${args.uuid}`
+              : `/repositories/${args.id}`;
+            const response = await this.api.get(url);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "search_repositories": {
+            const response = await this.api.get("/repositories/search", {
+              params: { term: args.term },
+            });
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "create_repository": {
+            const response = await this.api.post("/repositories", args);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "get_repository_statistics": {
+            const response = await this.api.get("/repositories/statistics");
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "list_repository_scans": {
+            let url = "/repository-scans";
+            if (args.repositoryId) {
+              url = `/repository-scans/repository/${args.repositoryId}`;
+            } else if (args.status) {
+              url = `/repository-scans/status/${args.status}`;
+            }
+            const response = await this.api.get(url);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "get_repository_scan": {
+            const url = args.uuid
+              ? `/repository-scans/uuid/${args.uuid}`
+              : `/repository-scans/${args.id}`;
+            const response = await this.api.get(url);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "create_repository_scan": {
+            const scanData: any = {
+              repositoryId: args.repositoryId,
+              scannedBranch: args.scannedBranch,
+              scanStatus: "PENDING",
+            };
+            if (args.scanType) {
+              scanData.scanType = args.scanType;
+            }
+            if (args.initiatedBy) {
+              scanData.initiatedBy = args.initiatedBy;
+            }
+            const response = await this.api.post("/repository-scans", scanData);
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(response.data, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "get_scan_statistics": {
+            const response = await this.api.get("/repository-scans/statistics");
             return {
               content: [
                 {
