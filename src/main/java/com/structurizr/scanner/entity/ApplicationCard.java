@@ -1,5 +1,6 @@
 package com.structurizr.scanner.entity;
 
+import com.structurizr.scanner.constants.CardType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
