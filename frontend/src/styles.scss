@@ -1,0 +1,29 @@
+/* You can add global styles to this file, and also import other style files */
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+.container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.mat-mdc-card {
+  margin-bottom: 20px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}

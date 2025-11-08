@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: structurizr-postgres
+    environment:
+      POSTGRES_DB: architecturedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - structurizr-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: structurizr-backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: architecturedb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      SERVER_PORT: 8080
+      GITLAB_URL: ${GITLAB_URL:-http://localhost}
+      GITLAB_TOKEN: ${GITLAB_TOKEN:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - structurizr-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: structurizr-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - structurizr-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  structurizr-network:
+    driver: bridge
