@@ -1,5 +1,6 @@
 package com.structurizr.scanner.dto;
 
+import com.structurizr.scanner.constants.CardType;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,8 +22,7 @@ public class ApplicationCardDTO {
     private String title;
 
     @NotBlank(message = "Card type is required")
-    @Pattern(regexp = "^(overview|architecture|sequence|deployment|dataflow|custom)$",
-             message = "Card type must be one of: overview, architecture, sequence, deployment, dataflow, custom")
+    @Pattern(regexp = CardType.VALIDATION_PATTERN, message = CardType.VALIDATION_MESSAGE)
     private String cardType;
 
     @Size(max = 100000, message = "Content must not exceed 100,000 characters")

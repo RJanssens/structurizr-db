@@ -51,8 +51,7 @@ public class ApplicationCard {
      * Type of card (e.g., "overview", "architecture", "sequence", "deployment", "custom")
      */
     @NotBlank(message = "Card type is required")
-    @Pattern(regexp = "^(overview|architecture|sequence|deployment|dataflow|custom)$",
-             message = "Card type must be one of: overview, architecture, sequence, deployment, dataflow, custom")
+    @Pattern(regexp = CardType.VALIDATION_PATTERN, message = CardType.VALIDATION_MESSAGE)
     @Column(name = "card_type", nullable = false, length = 50)
     private String cardType;
 

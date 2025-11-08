@@ -18,157 +18,14 @@ import { ApplicationCardService } from '../../services/application-card.service'
 import { ApplicationCard } from '../../models/application.model';
 import { marked } from 'marked';
 import mermaid from 'mermaid';
-
-// Card Templates
-interface CardTemplate {
-  title: string;
-  cardType: string;
-  content: string;
-  mermaidDiagram?: string;
-  description: string;
-}
-
-const CARD_TEMPLATES: CardTemplate[] = [
-  {
-    title: 'Application Overview',
-    cardType: 'overview',
-    description: 'High-level overview of the application',
-    content: `# Application Overview
-
-## Purpose
-[Describe the main purpose and business value]
-
-## Key Features
-- Feature 1
-- Feature 2
-- Feature 3
-
-## Target Users
-[Who uses this application?]
-
-## Dependencies
-[List key dependencies]`,
-    mermaidDiagram: `graph TD
-    A[Users] -->|Access| B[Application]
-    B -->|Reads/Writes| C[Database]
-    B -->|Calls| D[External API]`
-  },
-  {
-    title: 'Architecture Diagram',
-    cardType: 'architecture',
-    description: 'Component architecture and relationships',
-    content: `# Architecture
-
-## Components
-- **Frontend**: [Technology stack]
-- **Backend**: [Technology stack]
-- **Database**: [Database type]
-
-## Design Patterns
-[List architectural patterns used]`,
-    mermaidDiagram: `graph LR
-    subgraph Frontend
-        A[UI Layer]
-        B[State Management]
-    end
-    subgraph Backend
-        C[API Layer]
-        D[Business Logic]
-        E[Data Access]
-    end
-    subgraph Data
-        F[(Database)]
-    end
-    A --> C
-    B --> C
-    C --> D
-    D --> E
-    E --> F`
-  },
-  {
-    title: 'Sequence Diagram',
-    cardType: 'sequence',
-    description: 'Process flow and interactions',
-    content: `# Process Flow
-
-## Scenario
-[Describe the scenario]
-
-## Steps
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-## Error Handling
-[How errors are handled]`,
-    mermaidDiagram: `sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant Database
-
-    User->>+Frontend: Action
-    Frontend->>+Backend: API Request
-    Backend->>+Database: Query
-    Database-->>-Backend: Result
-    Backend-->>-Frontend: Response
-    Frontend-->>-User: Display Result`
-  },
-  {
-    title: 'Deployment Architecture',
-    cardType: 'deployment',
-    description: 'Infrastructure and deployment setup',
-    content: `# Deployment
-
-## Environments
-- **Development**: [Details]
-- **Staging**: [Details]
-- **Production**: [Details]
-
-## Infrastructure
-[Describe infrastructure]
-
-## CI/CD Pipeline
-[Describe deployment process]`,
-    mermaidDiagram: `graph TB
-    subgraph Production
-        A[Load Balancer]
-        B[App Server 1]
-        C[App Server 2]
-        D[(Primary DB)]
-        E[(Replica DB)]
-    end
-    A --> B
-    A --> C
-    B --> D
-    C --> D
-    D --> E`
-  },
-  {
-    title: 'Data Flow Diagram',
-    cardType: 'dataflow',
-    description: 'How data flows through the system',
-    content: `# Data Flow
-
-## Data Sources
-- [Source 1]
-- [Source 2]
-
-## Processing Steps
-1. [Step 1]
-2. [Step 2]
-
-## Data Consumers
-- [Consumer 1]
-- [Consumer 2]`,
-    mermaidDiagram: `graph LR
-    A[Data Source] -->|Raw Data| B[Ingestion]
-    B -->|Validated| C[Processing]
-    C -->|Transformed| D[Storage]
-    D -->|Queries| E[API]
-    E -->|Formatted| F[Consumers]`
-  }
-];
+import {
+  CardType,
+  CARD_TYPE_LABELS,
+  CARD_TYPE_ICONS,
+  CARD_TEMPLATES,
+  CARD_TYPES,
+  CardTemplate
+} from '../../constants/card.constants';
 
 @Component({
   selector: 'app-application-cards',
@@ -207,12 +64,7 @@ const CARD_TEMPLATES: CardTemplate[] = [
             <mat-label>Filter by type</mat-label>
             <mat-select [(ngModel)]="selectedCardType" (selectionChange)="onFilterChange()">
               <mat-option value="all">All Types</mat-option>
-              <mat-option value="overview">Overview</mat-option>
-              <mat-option value="architecture">Architecture</mat-option>
-              <mat-option value="sequence">Sequence</mat-option>
-              <mat-option value="deployment">Deployment</mat-option>
-              <mat-option value="dataflow">Data Flow</mat-option>
-              <mat-option value="custom">Custom</mat-option>
+              <mat-option *ngFor="let type of cardTypes" [value]="type">{{ getCardTypeLabel(type) }}</mat-option>
             </mat-select>
           </mat-form-field>
 
@@ -239,190 +91,206 @@ const CARD_TEMPLATES: CardTemplate[] = [
               </div>
             </button>
           </mat-menu>
-
-          <button mat-icon-button [matMenuTriggerFor]="bulkMenu" *ngIf="!editMode && filteredCards.length > 0">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #bulkMenu="matMenu">
-            <button mat-menu-item (click)="toggleBulkSelect()">
-              <mat-icon>{{ bulkSelectMode ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-              <span>{{ bulkSelectMode ? 'Cancel Selection' : 'Select Multiple' }}</span>
-            </button>
-            <button mat-menu-item (click)="exportAllCards()" [disabled]="filteredCards.length === 0">
-              <mat-icon>download</mat-icon>
-              <span>Export All to Markdown</span>
-            </button>
-          </mat-menu>
         </div>
       </div>
 
-      <div *ngIf="bulkSelectMode && selectedCards.size > 0" class="bulk-actions">
+      <!-- Bulk Action Bar -->
+      <div class="bulk-actions-bar" *ngIf="bulkSelectMode && selectedCards.size > 0">
         <span>{{ selectedCards.size }} card(s) selected</span>
-        <button mat-raised-button (click)="bulkDelete()">
-          <mat-icon>delete</mat-icon>
-          Delete Selected
-        </button>
-        <button mat-raised-button (click)="bulkToggleVisibility(true)">
-          <mat-icon>visibility</mat-icon>
-          Show Selected
-        </button>
-        <button mat-raised-button (click)="bulkToggleVisibility(false)">
-          <mat-icon>visibility_off</mat-icon>
-          Hide Selected
-        </button>
+        <div class="bulk-action-buttons">
+          <button mat-button (click)="bulkSetVisibility(true)">
+            <mat-icon>visibility</mat-icon>
+            Show
+          </button>
+          <button mat-button (click)="bulkSetVisibility(false)">
+            <mat-icon>visibility_off</mat-icon>
+            Hide
+          </button>
+          <button mat-button color="warn" (click)="bulkDeleteCards()">
+            <mat-icon>delete</mat-icon>
+            Delete
+          </button>
+          <button mat-button (click)="toggleBulkSelectMode()">
+            Cancel
+          </button>
+        </div>
       </div>
 
-      <div *ngIf="loading" class="loading-spinner">
+      <!-- Loading Spinner -->
+      <div class="loading-container" *ngIf="loading">
         <mat-spinner></mat-spinner>
       </div>
 
-      <div *ngIf="!loading && !editMode && filteredCards.length === 0 && cards.length === 0" class="empty-state">
-        <mat-icon>description</mat-icon>
-        <p>No cards yet. Create your first documentation card!</p>
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="!loading && cards.length === 0 && !editMode">
+        <mat-icon>note_add</mat-icon>
+        <h3>No Documentation Cards Yet</h3>
+        <p>Start documenting your application by creating your first card.</p>
+        <button mat-raised-button color="primary" (click)="createNewCard()">
+          <mat-icon>add</mat-icon>
+          Create First Card
+        </button>
       </div>
 
-      <div *ngIf="!loading && !editMode && filteredCards.length === 0 && cards.length > 0" class="empty-state">
-        <mat-icon>search_off</mat-icon>
-        <p>No cards match your search/filter criteria</p>
-      </div>
-
-      <div *ngIf="!loading && !editMode && filteredCards.length > 0" class="cards-grid">
-        <mat-card *ngFor="let card of filteredCards" class="card-item" [class.selected]="bulkSelectMode && selectedCards.has(card.id!)">
-          <mat-checkbox *ngIf="bulkSelectMode" class="bulk-checkbox"
-                        [checked]="selectedCards.has(card.id!)"
-                        (change)="toggleCardSelection(card.id!)">
-          </mat-checkbox>
-
+      <!-- Cards Grid -->
+      <div class="cards-grid" *ngIf="!loading && filteredCards.length > 0 && !editMode">
+        <mat-card *ngFor="let card of filteredCards" class="application-card">
           <mat-card-header>
+            <mat-checkbox
+              *ngIf="bulkSelectMode"
+              [checked]="selectedCards.has(card.id!)"
+              (change)="toggleCardSelection(card.id!)"
+              (click)="$event.stopPropagation()"
+              class="bulk-select-checkbox">
+            </mat-checkbox>
             <mat-card-title>{{ card.title }}</mat-card-title>
             <mat-card-subtitle>
-              <mat-chip>
-                <mat-icon class="chip-icon">{{ getCardTypeIcon(card.cardType) }}</mat-icon>
-                {{ card.cardType }}
-              </mat-chip>
-              <small class="updated-time">Updated {{ getRelativeTime(card.updatedAt) }}</small>
+              <mat-chip-set>
+                <mat-chip>
+                  <mat-icon class="chip-icon">{{ getCardTypeIcon(card.cardType) }}</mat-icon>
+                  {{ getCardTypeLabel(card.cardType) }}</mat-chip>
+                <mat-chip *ngIf="!card.visible">
+                  <mat-icon class="chip-icon">visibility_off</mat-icon>
+                  Hidden
+                </mat-chip>
+              </mat-chip-set>
             </mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <div *ngIf="card.content" class="card-content" [innerHTML]="renderMarkdown(card.content)"></div>
-            <div *ngIf="card.mermaidDiagram" class="mermaid-container">
-              <div class="mermaid" [attr.data-diagram]="card.mermaidDiagram">{{ card.mermaidDiagram }}</div>
+            <div class="card-preview">
+              <div *ngIf="card.content" class="markdown-preview" [innerHTML]="renderMarkdown(card.content)"></div>
+              <div *ngIf="card.mermaidDiagram" class="mermaid-preview">
+                <div [id]="'mermaid-' + card.id" class="mermaid">{{ card.mermaidDiagram }}</div>
+              </div>
+            </div>
+            <div class="card-metadata">
+              <small>Updated {{ getRelativeTime(card.updatedAt) }}</small>
             </div>
           </mat-card-content>
           <mat-card-actions>
-            <button mat-button (click)="editCard(card)">
+            <button mat-button color="primary" (click)="editCard(card)">
               <mat-icon>edit</mat-icon>
               Edit
             </button>
-            <button mat-button (click)="cloneCard(card)">
-              <mat-icon>content_copy</mat-icon>
-              Clone
+            <button mat-button [matMenuTriggerFor]="cardMenu">
+              <mat-icon>more_vert</mat-icon>
             </button>
-            <button mat-button (click)="exportCard(card)">
-              <mat-icon>download</mat-icon>
-              Export
-            </button>
-            <button mat-button color="warn" (click)="deleteCardWithConfirmation(card)">
-              <mat-icon>delete</mat-icon>
-              Delete
-            </button>
+            <mat-menu #cardMenu="matMenu">
+              <button mat-menu-item (click)="cloneCard(card)">
+                <mat-icon>content_copy</mat-icon>
+                Clone
+              </button>
+              <button mat-menu-item (click)="toggleCardVisibility(card)">
+                <mat-icon>{{ card.visible ? 'visibility_off' : 'visibility' }}</mat-icon>
+                {{ card.visible ? 'Hide' : 'Show' }}
+              </button>
+              <button mat-menu-item (click)="deleteCardWithConfirmation(card)">
+                <mat-icon color="warn">delete</mat-icon>
+                Delete
+              </button>
+            </mat-menu>
           </mat-card-actions>
         </mat-card>
       </div>
 
-      <mat-card *ngIf="editMode" class="editor-card">
-        <mat-card-header>
-          <mat-card-title>{{ currentCard.id ? 'Edit Card' : 'New Card' }}</mat-card-title>
-          <span class="auto-save-indicator" *ngIf="hasUnsavedChanges">
-            <mat-icon>save</mat-icon>
-            Draft saved
-          </span>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="form-grid">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Title</mat-label>
-              <input matInput [(ngModel)]="currentCard.title" (ngModelChange)="onCardChange()" placeholder="Card title" required>
-              <mat-error>Title is required</mat-error>
-            </mat-form-field>
+      <!-- No Filtered Results -->
+      <div class="empty-state" *ngIf="!loading && cards.length > 0 && filteredCards.length === 0 && !editMode">
+        <mat-icon>search_off</mat-icon>
+        <h3>No Cards Found</h3>
+        <p>No cards match your current filters.</p>
+        <button mat-button (click)="clearFilters()">Clear Filters</button>
+      </div>
 
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Card Type</mat-label>
-              <mat-select [(ngModel)]="currentCard.cardType" (selectionChange)="onCardChange()" required>
-                <mat-option value="overview">
-                  <mat-icon>dashboard</mat-icon>
-                  Overview
-                </mat-option>
-                <mat-option value="architecture">
-                  <mat-icon>account_tree</mat-icon>
-                  Architecture
-                </mat-option>
-                <mat-option value="sequence">
-                  <mat-icon>timeline</mat-icon>
-                  Sequence Diagram
-                </mat-option>
-                <mat-option value="deployment">
-                  <mat-icon>cloud_upload</mat-icon>
-                  Deployment
-                </mat-option>
-                <mat-option value="dataflow">
-                  <mat-icon>device_hub</mat-icon>
-                  Data Flow
-                </mat-option>
-                <mat-option value="custom">
-                  <mat-icon>note</mat-icon>
-                  Custom
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Content (Markdown supported)</mat-label>
-              <textarea matInput [(ngModel)]="currentCard.content" (ngModelChange)="onCardChange()"
-                        rows="10"
-                        placeholder="Write your content here. Markdown is supported."></textarea>
-              <mat-hint>Use Markdown syntax for formatting. Press Ctrl+S to save, Esc to cancel.</mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Mermaid Diagram</mat-label>
-              <textarea matInput [(ngModel)]="currentCard.mermaidDiagram" (ngModelChange)="onCardChange()"
-                        rows="10"
-                        placeholder="graph TD&#10;  A[Start] --> B[Process]&#10;  B --> C[End]"></textarea>
-              <mat-hint>Use Mermaid syntax for diagrams</mat-hint>
-            </mat-form-field>
-
-            <div class="form-row">
-              <mat-form-field appearance="outline">
-                <mat-label>Sort Order</mat-label>
-                <input matInput type="number" [(ngModel)]="currentCard.sortOrder" (ngModelChange)="onCardChange()" placeholder="0">
+      <!-- Edit Mode -->
+      <div class="edit-container" *ngIf="editMode">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ currentCard.id ? 'Edit' : 'Create' }} Card</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="edit-form">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Title</mat-label>
+                <input matInput [(ngModel)]="currentCard.title" (ngModelChange)="onCardChange()" required>
               </mat-form-field>
 
-              <mat-checkbox [(ngModel)]="currentCard.visible" (ngModelChange)="onCardChange()">
-                Visible
-              </mat-checkbox>
-            </div>
-          </div>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Card Type</mat-label>
+                <mat-select [(ngModel)]="currentCard.cardType" (selectionChange)="onCardChange()" required>
+                  <mat-option *ngFor="let type of cardTypes" [value]="type">
+                    <mat-icon>{{ getCardTypeIcon(type) }}</mat-icon>
+                    {{ getCardTypeLabel(type) }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
 
-          <div class="preview-section" *ngIf="currentCard.content || currentCard.mermaidDiagram">
-            <h3>Preview</h3>
-            <div *ngIf="currentCard.content" class="preview-content" [innerHTML]="renderMarkdown(currentCard.content)"></div>
-            <div *ngIf="currentCard.mermaidDiagram" class="mermaid-preview">
-              <div class="mermaid">{{ currentCard.mermaidDiagram }}</div>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Content (Markdown)</mat-label>
+                <textarea matInput [(ngModel)]="currentCard.content" (ngModelChange)="onCardChange()"
+                          rows="10" placeholder="Enter markdown content..."></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Mermaid Diagram</mat-label>
+                <textarea matInput [(ngModel)]="currentCard.mermaidDiagram" (ngModelChange)="onCardChange()"
+                          rows="8" placeholder="graph TD&#10;    A[Start] --> B[End]"></textarea>
+              </mat-form-field>
+
+              <div class="form-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Sort Order</mat-label>
+                  <input matInput type="number" [(ngModel)]="currentCard.sortOrder" (ngModelChange)="onCardChange()">
+                </mat-form-field>
+
+                <mat-checkbox [(ngModel)]="currentCard.visible" (ngModelChange)="onCardChange()">
+                  Visible
+                </mat-checkbox>
+              </div>
+
+              <!-- Preview Section -->
+              <div class="preview-section" *ngIf="currentCard.content || currentCard.mermaidDiagram">
+                <h3>Preview</h3>
+                <div class="card-preview">
+                  <div *ngIf="currentCard.content" class="markdown-preview" [innerHTML]="renderMarkdown(currentCard.content)"></div>
+                  <div *ngIf="currentCard.mermaidDiagram" class="mermaid-preview">
+                    <div id="mermaid-edit-preview" class="mermaid">{{ currentCard.mermaidDiagram }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Unsaved Changes Warning -->
+              <div class="unsaved-warning" *ngIf="hasUnsavedChanges">
+                <mat-icon>warning</mat-icon>
+                <span>You have unsaved changes</span>
+              </div>
             </div>
-          </div>
-        </mat-card-content>
-        <mat-card-actions>
-          <button mat-raised-button color="primary" (click)="saveCard()" [disabled]="isSaving">
-            <mat-spinner *ngIf="isSaving" diameter="20"></mat-spinner>
-            <mat-icon *ngIf="!isSaving">save</mat-icon>
-            {{ isSaving ? 'Saving...' : 'Save' }}
-          </button>
-          <button mat-button (click)="cancelEditWithConfirmation()">
-            Cancel
-          </button>
-        </mat-card-actions>
-      </mat-card>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-raised-button color="primary" (click)="saveCard()" [disabled]="isSaving || !currentCard.title || !currentCard.cardType">
+              <mat-icon>save</mat-icon>
+              {{ isSaving ? 'Saving...' : 'Save' }}
+            </button>
+            <button mat-button (click)="cancelEditWithConfirmation()">
+              Cancel
+            </button>
+            <div class="keyboard-hints">
+              <small>Ctrl+S to save | Esc to cancel</small>
+            </div>
+          </mat-card-actions>
+        </mat-card>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons" *ngIf="!editMode && cards.length > 0">
+        <button mat-button (click)="toggleBulkSelectMode()">
+          <mat-icon>{{ bulkSelectMode ? 'close' : 'checklist' }}</mat-icon>
+          {{ bulkSelectMode ? 'Cancel' : 'Bulk Select' }}
+        </button>
+        <button mat-button (click)="exportToMarkdown()">
+          <mat-icon>download</mat-icon>
+          Export All
+        </button>
+      </div>
     </div>
   `,
   styles: [`
@@ -434,27 +302,27 @@ const CARD_TEMPLATES: CardTemplate[] = [
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 16px;
     }
 
     .cards-header h2 {
       margin: 0;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .badge-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
 
     .header-actions {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
       flex-wrap: wrap;
     }
@@ -463,22 +331,22 @@ const CARD_TEMPLATES: CardTemplate[] = [
       min-width: 200px;
     }
 
-    .bulk-actions {
-      background: #e3f2fd;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 4px;
+    .bulk-actions-bar {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 15px;
+      padding: 12px 16px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      margin-bottom: 16px;
     }
 
-    .bulk-actions span {
-      flex: 1;
-      font-weight: 500;
+    .bulk-action-buttons {
+      display: flex;
+      gap: 8px;
     }
 
-    .loading-spinner {
+    .loading-container {
       display: flex;
       justify-content: center;
       padding: 40px;
@@ -494,50 +362,28 @@ const CARD_TEMPLATES: CardTemplate[] = [
       font-size: 64px;
       width: 64px;
       height: 64px;
-      color: #ccc;
+      color: #999;
+      margin-bottom: 16px;
     }
 
     .cards-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
       gap: 20px;
+      margin-bottom: 24px;
     }
 
-    .card-item {
-      height: 100%;
-      position: relative;
+    .application-card {
       transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .card-item:hover {
+    .application-card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     }
 
-    .card-item.selected {
-      border: 2px solid #3f51b5;
-    }
-
-    .bulk-checkbox {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 10;
-    }
-
-    .card-content {
-      margin-bottom: 15px;
-      line-height: 1.6;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .mermaid-container {
-      margin-top: 15px;
-      padding: 10px;
-      background: #f5f5f5;
-      border-radius: 4px;
-      overflow-x: auto;
+    .bulk-select-checkbox {
+      margin-right: 12px;
     }
 
     .chip-icon {
@@ -547,61 +393,101 @@ const CARD_TEMPLATES: CardTemplate[] = [
       margin-right: 4px;
     }
 
-    .updated-time {
-      margin-left: 10px;
+    .card-preview {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+    }
+
+    .markdown-preview {
+      padding: 12px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .markdown-preview h1 {
+      font-size: 1.5em;
+      margin-top: 0;
+    }
+
+    .markdown-preview h2 {
+      font-size: 1.3em;
+    }
+
+    .markdown-preview code {
+      background: #e8e8e8;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .mermaid-preview {
+      padding: 12px;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    .card-metadata {
       color: #666;
+      font-size: 0.9em;
+      padding-top: 8px;
+      border-top: 1px solid #eee;
     }
 
-    .editor-card {
-      margin-top: 20px;
+    .edit-container {
+      margin-bottom: 24px;
     }
 
-    .auto-save-indicator {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      color: #4caf50;
-      font-size: 14px;
-    }
-
-    .form-grid {
+    .edit-form {
       display: flex;
       flex-direction: column;
-      gap: 15px;
-    }
-
-    .form-row {
-      display: flex;
-      gap: 15px;
-      align-items: center;
+      gap: 16px;
     }
 
     .full-width {
       width: 100%;
     }
 
+    .form-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
     .preview-section {
-      margin-top: 30px;
-      padding: 20px;
+      margin-top: 24px;
+      padding: 16px;
       background: #f9f9f9;
       border-radius: 4px;
     }
 
-    .preview-content {
-      margin-bottom: 20px;
+    .preview-section h3 {
+      margin-top: 0;
     }
 
-    .mermaid-preview {
-      background: white;
-      padding: 15px;
-      border-radius: 4px;
-      overflow-x: auto;
-    }
-
-    mat-card-actions {
-      padding: 16px;
+    .unsaved-warning {
       display: flex;
-      gap: 10px;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #fff3cd;
+      border-radius: 4px;
+      color: #856404;
+    }
+
+    .keyboard-hints {
+      margin-left: auto;
+      color: #666;
+    }
+
+    .action-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
     }
 
     .template-menu-item {
@@ -611,7 +497,16 @@ const CARD_TEMPLATES: CardTemplate[] = [
 
     .template-menu-item small {
       color: #666;
-      font-size: 11px;
+      font-size: 0.85em;
+    }
+
+    mat-card-header mat-icon {
+      margin-right: 8px;
+    }
+
+    mat-select mat-option mat-icon {
+      vertical-align: middle;
+      margin-right: 8px;
     }
   `]
 })
@@ -624,6 +519,7 @@ export class ApplicationCardsComponent implements OnInit, OnChanges, AfterViewIn
   editMode = false;
   currentCard: ApplicationCard = this.getEmptyCard();
   templates = CARD_TEMPLATES;
+  cardTypes = CARD_TYPES;
   loading = false;
   isSaving = false;
   hasUnsavedChanges = false;
@@ -708,7 +604,7 @@ export class ApplicationCardsComponent implements OnInit, OnChanges, AfterViewIn
     this.filteredCards = this.cards.filter(card => {
       const matchesSearch = !this.searchTerm ||
         card.title.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        (card.content && card.content.toLowerCase().includes(this.searchTerm.toLowerCase()));
+        card.content?.toLowerCase().includes(this.searchTerm.toLowerCase());
 
       const matchesType = this.selectedCardType === 'all' || card.cardType === this.selectedCardType;
 
@@ -716,42 +612,49 @@ export class ApplicationCardsComponent implements OnInit, OnChanges, AfterViewIn
     });
   }
 
+  clearFilters(): void {
+    this.searchTerm = '';
+    this.selectedCardType = 'all';
+    this.applyFilters();
+  }
+
   createNewCard(): void {
     this.currentCard = this.getEmptyCard();
     this.editMode = true;
+    this.hasUnsavedChanges = false;
   }
 
   createFromTemplate(template: CardTemplate): void {
     this.currentCard = {
-      ...this.getEmptyCard(),
+      applicationId: this.applicationId,
       title: template.title,
       cardType: template.cardType,
       content: template.content,
-      mermaidDiagram: template.mermaidDiagram || ''
+      mermaidDiagram: template.mermaidDiagram || '',
+      sortOrder: 0,
+      visible: true
     };
     this.editMode = true;
+    this.hasUnsavedChanges = true;
+    setTimeout(() => this.initMermaid(), 100);
   }
 
   editCard(card: ApplicationCard): void {
     this.currentCard = { ...card };
     this.editMode = true;
+    this.hasUnsavedChanges = false;
+    setTimeout(() => this.initMermaid(), 100);
   }
 
-  cloneCard(card: ApplicationCard): void {
-    this.currentCard = {
-      ...card,
-      id: undefined,
-      title: `${card.title} (Copy)`,
-      createdAt: undefined,
-      updatedAt: undefined
-    };
-    this.editMode = true;
-    this.snackBar.open('Card cloned! Edit and save to create a new card.', 'Close', { duration: 3000 });
+  onCardChange(): void {
+    this.hasUnsavedChanges = true;
+    this.saveDraft();
+    setTimeout(() => this.initMermaid(), 100);
   }
 
   saveCard(): void {
     if (!this.currentCard.title || !this.currentCard.cardType) {
-      this.snackBar.open('Please fill in required fields', 'Close', { duration: 3000 });
+      this.snackBar.open('Please fill in all required fields', 'Close', { duration: 3000 });
       return;
     }
 
@@ -762,98 +665,83 @@ export class ApplicationCardsComponent implements OnInit, OnChanges, AfterViewIn
 
     saveOperation.subscribe({
       next: () => {
-        this.snackBar.open('Card saved successfully', 'Close', { duration: 3000 });
-        this.editMode = false;
+        this.snackBar.open(`Card ${this.currentCard.id ? 'updated' : 'created'} successfully`, 'Close', { duration: 3000 });
         this.isSaving = false;
+        this.editMode = false;
         this.hasUnsavedChanges = false;
         this.clearDraft();
         this.loadCards();
       },
       error: (error) => {
         console.error('Error saving card:', error);
-        const errorMsg = error.error?.message || 'Error saving card. Please check your input and try again.';
-        this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
+        this.snackBar.open('Error saving card. Please try again.', 'Close', { duration: 5000 });
         this.isSaving = false;
-      }
-    });
-  }
-
-  deleteCardWithConfirmation(card: ApplicationCard): void {
-    const confirmDelete = confirm(`Are you sure you want to delete the card "${card.title}"?`);
-    if (!confirmDelete || !card.id) {
-      return;
-    }
-
-    this.cardService.deleteCard(this.applicationId, card.id).subscribe({
-      next: () => {
-        this.snackBar.open('Card deleted successfully', 'Close', { duration: 3000 });
-        this.loadCards();
-      },
-      error: (error) => {
-        console.error('Error deleting card:', error);
-        this.snackBar.open('Error deleting card. Please try again.', 'Close', { duration: 5000 });
       }
     });
   }
 
   cancelEditWithConfirmation(): void {
     if (this.hasUnsavedChanges) {
-      const confirmCancel = confirm('You have unsaved changes. Are you sure you want to cancel?');
-      if (!confirmCancel) {
-        return;
+      if (confirm('You have unsaved changes. Are you sure you want to cancel?')) {
+        this.editMode = false;
+        this.hasUnsavedChanges = false;
+        this.clearDraft();
       }
-      this.clearDraft();
+    } else {
+      this.editMode = false;
     }
-    this.editMode = false;
-    this.hasUnsavedChanges = false;
-    this.currentCard = this.getEmptyCard();
   }
 
-  exportCard(card: ApplicationCard): void {
-    let markdown = `# ${card.title}\n\n`;
-    markdown += `**Type:** ${card.cardType}\n\n`;
-
-    if (card.content) {
-      markdown += card.content + '\n\n';
-    }
-
-    if (card.mermaidDiagram) {
-      markdown += '## Diagram\n\n```mermaid\n' + card.mermaidDiagram + '\n```\n\n';
-    }
-
-    markdown += `\n---\n*Created: ${card.createdAt}*\n`;
-    markdown += `*Updated: ${card.updatedAt}*\n`;
-
-    this.downloadFile(markdown, `${card.title.replace(/[^a-z0-9]/gi, '_')}.md`, 'text/markdown');
-    this.snackBar.open('Card exported successfully', 'Close', { duration: 3000 });
-  }
-
-  exportAllCards(): void {
-    let markdown = `# Application Documentation Cards\n\n`;
-    markdown += `**Total Cards:** ${this.filteredCards.length}\n`;
-    markdown += `**Exported:** ${new Date().toLocaleString()}\n\n`;
-    markdown += `---\n\n`;
-
-    this.filteredCards.forEach((card, index) => {
-      markdown += `## ${index + 1}. ${card.title}\n\n`;
-      markdown += `**Type:** ${card.cardType}\n\n`;
-
-      if (card.content) {
-        markdown += card.content + '\n\n';
+  toggleCardVisibility(card: ApplicationCard): void {
+    const updatedCard = { ...card, visible: !card.visible };
+    this.cardService.updateCard(this.applicationId, card.id!, updatedCard).subscribe({
+      next: () => {
+        this.snackBar.open(`Card ${updatedCard.visible ? 'shown' : 'hidden'}`, 'Close', { duration: 2000 });
+        this.loadCards();
+      },
+      error: (error) => {
+        console.error('Error updating card visibility:', error);
+        this.snackBar.open('Error updating card. Please try again.', 'Close', { duration: 5000 });
       }
-
-      if (card.mermaidDiagram) {
-        markdown += '### Diagram\n\n```mermaid\n' + card.mermaidDiagram + '\n```\n\n';
-      }
-
-      markdown += `---\n\n`;
     });
-
-    this.downloadFile(markdown, `application-cards-${this.applicationId}.md`, 'text/markdown');
-    this.snackBar.open(`${this.filteredCards.length} cards exported successfully`, 'Close', { duration: 3000 });
   }
 
-  toggleBulkSelect(): void {
+  deleteCardWithConfirmation(card: ApplicationCard): void {
+    if (confirm(`Are you sure you want to delete "${card.title}"?`)) {
+      this.cardService.deleteCard(this.applicationId, card.id!).subscribe({
+        next: () => {
+          this.snackBar.open('Card deleted successfully', 'Close', { duration: 3000 });
+          this.loadCards();
+        },
+        error: (error) => {
+          console.error('Error deleting card:', error);
+          this.snackBar.open('Error deleting card. Please try again.', 'Close', { duration: 5000 });
+        }
+      });
+    }
+  }
+
+  cloneCard(card: ApplicationCard): void {
+    const clonedCard: ApplicationCard = {
+      ...card,
+      id: undefined,
+      title: `${card.title} (Copy)`,
+      sortOrder: card.sortOrder + 1
+    };
+
+    this.cardService.createCard(this.applicationId, clonedCard).subscribe({
+      next: () => {
+        this.snackBar.open('Card cloned successfully', 'Close', { duration: 3000 });
+        this.loadCards();
+      },
+      error: (error) => {
+        console.error('Error cloning card:', error);
+        this.snackBar.open('Error cloning card. Please try again.', 'Close', { duration: 5000 });
+      }
+    });
+  }
+
+  toggleBulkSelectMode(): void {
     this.bulkSelectMode = !this.bulkSelectMode;
     if (!this.bulkSelectMode) {
       this.selectedCards.clear();
@@ -868,118 +756,102 @@ export class ApplicationCardsComponent implements OnInit, OnChanges, AfterViewIn
     }
   }
 
-  bulkDelete(): void {
-    const confirmDelete = confirm(`Are you sure you want to delete ${this.selectedCards.size} card(s)?`);
-    if (!confirmDelete) {
-      return;
-    }
+  bulkSetVisibility(visible: boolean): void {
+    const updatePromises: Promise<any>[] = [];
 
-    const deletePromises = Array.from(this.selectedCards).map(cardId =>
-      this.cardService.deleteCard(this.applicationId, cardId).toPromise()
-    );
-
-    Promise.all(deletePromises).then(() => {
-      this.snackBar.open(`${this.selectedCards.size} card(s) deleted successfully`, 'Close', { duration: 3000 });
-      this.selectedCards.clear();
-      this.bulkSelectMode = false;
-      this.loadCards();
-    }).catch(error => {
-      console.error('Error deleting cards:', error);
-      this.snackBar.open('Error deleting some cards. Please try again.', 'Close', { duration: 5000 });
-    });
-  }
-
-  bulkToggleVisibility(visible: boolean): void {
-    const updatePromises = Array.from(this.selectedCards).map(cardId => {
+    this.selectedCards.forEach(cardId => {
       const card = this.cards.find(c => c.id === cardId);
       if (card) {
-        card.visible = visible;
-        return this.cardService.updateCard(this.applicationId, cardId, card).toPromise();
+        const updatedCard = { ...card, visible };
+        const promise = new Promise((resolve, reject) => {
+          this.cardService.updateCard(this.applicationId, cardId, updatedCard).subscribe({
+            next: resolve,
+            error: reject
+          });
+        });
+        updatePromises.push(promise);
       }
-      return Promise.resolve();
     });
 
     Promise.all(updatePromises).then(() => {
-      this.snackBar.open(`${this.selectedCards.size} card(s) updated successfully`, 'Close', { duration: 3000 });
+      this.snackBar.open(`${this.selectedCards.size} card(s) updated`, 'Close', { duration: 3000 });
       this.selectedCards.clear();
       this.bulkSelectMode = false;
       this.loadCards();
     }).catch(error => {
-      console.error('Error updating cards:', error);
+      console.error('Error in bulk update:', error);
       this.snackBar.open('Error updating some cards. Please try again.', 'Close', { duration: 5000 });
     });
   }
 
-  onCardChange(): void {
-    this.hasUnsavedChanges = true;
-    this.saveDraft();
-  }
+  bulkDeleteCards(): void {
+    if (confirm(`Are you sure you want to delete ${this.selectedCards.size} card(s)?`)) {
+      const deletePromises: Promise<any>[] = [];
 
-  saveDraft(): void {
-    const draftKey = this.getDraftKey();
-    localStorage.setItem(draftKey, JSON.stringify(this.currentCard));
-  }
+      this.selectedCards.forEach(cardId => {
+        const promise = new Promise((resolve, reject) => {
+          this.cardService.deleteCard(this.applicationId, cardId).subscribe({
+            next: resolve,
+            error: reject
+          });
+        });
+        deletePromises.push(promise);
+      });
 
-  loadDraft(): void {
-    const draftKey = this.getDraftKey();
-    const draft = localStorage.getItem(draftKey);
-    if (draft) {
-      try {
-        const parsedDraft = JSON.parse(draft);
-        const confirmRestore = confirm('Found an unsaved draft. Would you like to restore it?');
-        if (confirmRestore) {
-          this.currentCard = parsedDraft;
-          this.editMode = true;
-          this.hasUnsavedChanges = true;
-        } else {
-          this.clearDraft();
-        }
-      } catch (e) {
-        console.error('Error loading draft:', e);
-        this.clearDraft();
-      }
+      Promise.all(deletePromises).then(() => {
+        this.snackBar.open(`${this.selectedCards.size} card(s) deleted`, 'Close', { duration: 3000 });
+        this.selectedCards.clear();
+        this.bulkSelectMode = false;
+        this.loadCards();
+      }).catch(error => {
+        console.error('Error in bulk delete:', error);
+        this.snackBar.open('Error deleting some cards. Please try again.', 'Close', { duration: 5000 });
+      });
     }
   }
 
-  clearDraft(): void {
-    const draftKey = this.getDraftKey();
-    localStorage.removeItem(draftKey);
-  }
+  exportToMarkdown(): void {
+    let markdown = `# Documentation Cards\n\n`;
 
-  private getDraftKey(): string {
-    return `${this.DRAFT_KEY_PREFIX}${this.applicationId}`;
+    this.cards.forEach(card => {
+      markdown += `## ${card.title}\n\n`;
+      markdown += `**Type:** ${card.cardType}\n\n`;
+      if (card.content) {
+        markdown += `${card.content}\n\n`;
+      }
+      if (card.mermaidDiagram) {
+        markdown += `### Diagram\n\n\`\`\`mermaid\n${card.mermaidDiagram}\n\`\`\`\n\n`;
+      }
+      markdown += `---\n\n`;
+    });
+
+    this.downloadFile(markdown, 'documentation-cards.md', 'text/markdown');
+    this.snackBar.open('Cards exported successfully', 'Close', { duration: 3000 });
   }
 
   renderMarkdown(content: string): string {
-    if (!content) return '';
     try {
       return marked.parse(content) as string;
     } catch (error) {
-      console.error('Error parsing markdown:', error);
+      console.error('Error rendering markdown:', error);
       return content;
     }
   }
 
-  initMermaid(): void {
+  private initMermaid(): void {
     try {
-      mermaid.run({
-        querySelector: '.mermaid'
-      });
+      mermaid.contentLoaded();
     } catch (error) {
       console.error('Error initializing Mermaid:', error);
     }
   }
 
   getCardTypeIcon(cardType: string): string {
-    const icons: { [key: string]: string } = {
-      'overview': 'dashboard',
-      'architecture': 'account_tree',
-      'sequence': 'timeline',
-      'deployment': 'cloud_upload',
-      'dataflow': 'device_hub',
-      'custom': 'note'
-    };
-    return icons[cardType] || 'note';
+    return CARD_TYPE_ICONS[cardType as CardType] || 'note';
+  }
+
+  getCardTypeLabel(cardType: string): string {
+    return CARD_TYPE_LABELS[cardType as CardType] || cardType;
   }
 
   getRelativeTime(dateString?: string): string {
@@ -1013,11 +885,43 @@ export class ApplicationCardsComponent implements OnInit, OnChanges, AfterViewIn
     return {
       applicationId: this.applicationId,
       title: '',
-      cardType: 'overview',
+      cardType: CardType.OVERVIEW,
       content: '',
       mermaidDiagram: '',
       sortOrder: 0,
       visible: true
     };
+  }
+
+  private getDraftKey(): string {
+    return `${this.DRAFT_KEY_PREFIX}${this.applicationId}`;
+  }
+
+  private saveDraft(): void {
+    const draftKey = this.getDraftKey();
+    localStorage.setItem(draftKey, JSON.stringify(this.currentCard));
+  }
+
+  private loadDraft(): void {
+    const draftKey = this.getDraftKey();
+    const draft = localStorage.getItem(draftKey);
+    if (draft) {
+      try {
+        const parsedDraft = JSON.parse(draft);
+        if (parsedDraft.applicationId === this.applicationId) {
+          this.currentCard = parsedDraft;
+          this.hasUnsavedChanges = true;
+          this.editMode = true;
+          this.snackBar.open('Restored unsaved draft', 'Dismiss', { duration: 3000 });
+        }
+      } catch (error) {
+        console.error('Error loading draft:', error);
+      }
+    }
+  }
+
+  private clearDraft(): void {
+    const draftKey = this.getDraftKey();
+    localStorage.removeItem(draftKey);
   }
 }
