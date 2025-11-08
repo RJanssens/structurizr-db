@@ -25,5 +25,13 @@ export const routes: Routes = [
   {
     path: 'technologies',
     loadComponent: () => import('./components/technology-overview/technology-overview.component').then(m => m.TechnologyOverviewComponent)
+  },
+  {
+    path: 'repositories',
+    loadComponent: () => import('./components/repository-list/repository-list.component').then(m => m.RepositoryListComponent)
+  },
+  {
+    path: 'repositories/:id',
+    loadComponent: () => import('./components/repository-detail/repository-detail.component').then(m => m.RepositoryDetailComponent)
   }
 ];

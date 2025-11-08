@@ -46,6 +46,10 @@ import { MatListModule } from '@angular/material/list';
             <mat-icon matListItemIcon>code</mat-icon>
             <span matListItemTitle>Technologies</span>
           </a>
+          <a mat-list-item routerLink="/repositories" routerLinkActive="active">
+            <mat-icon matListItemIcon>source</mat-icon>
+            <span matListItemTitle>Repositories</span>
+          </a>
         </mat-nav-list>
       </mat-sidenav>
 

@@ -3,6 +3,7 @@ export interface Application {
   uuid: string;
   name: string;
   description?: string;
+  repositoryId?: number;
   repositoryUrl?: string;
   department?: string;
   author?: string;
